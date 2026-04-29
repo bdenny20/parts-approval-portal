@@ -5,6 +5,7 @@ import { RequestStatusBadge } from "../components/requests/RequestStatusBadge";
 import { formatCurrency, formatDateTime } from "../lib/formatters";
 import { supabase } from "../lib/supabaseClient";
 import type { ApprovalAction, PartsQuote, PartsRequest } from "../types/domain";
+import { ApprovalActionPanel } from "../components/requests/ApprovalActionPanel";
 
 export function RequestDetailPage() {
     const { requestId } = useParams<{ requestId: string }>();
@@ -15,69 +16,69 @@ export function RequestDetailPage() {
     const [loading, setLoading] = useState(true);
     const [errorMessage, setErrorMessage] = useState("");
 
-    useEffect(() => {
-        async function loadDetail() {
-            if (!requestId) {
-                setErrorMessage("Missing request ID.");
-                setLoading(false);
-                return;
-            }
-
-            setLoading(true);
-            setErrorMessage("");
-
-            const requestResponse = await supabase
-                .from("parts_requests")
-                .select("*")
-                .eq("id", requestId)
-                .maybeSingle();
-
-            if (requestResponse.error) {
-                console.error("Failed to load request:", requestResponse.error);
-                setErrorMessage(requestResponse.error.message);
-                setRequest(null);
-                setLoading(false);
-                return;
-            }
-
-            if (!requestResponse.data) {
-                setErrorMessage("Request not found.");
-                setRequest(null);
-                setLoading(false);
-                return;
-            }
-
-            setRequest(requestResponse.data as PartsRequest);
-
-            const quotesResponse = await supabase
-                .from("parts_quotes")
-                .select("*")
-                .eq("request_id", requestId)
-                .order("quote_number", { ascending: true });
-
-            if (quotesResponse.error) {
-                console.error("Failed to load quotes:", quotesResponse.error);
-                setQuotes([]);
-            } else {
-                setQuotes((quotesResponse.data ?? []) as PartsQuote[]);
-            }
-
-            const actionsResponse = await supabase
-                .from("approval_actions")
-                .select("*, profiles(full_name, email)")
-                .eq("request_id", requestId)
-                .order("created_at", { ascending: false });
-
-            if (actionsResponse.error) {
-                console.error("Failed to load actions:", actionsResponse.error);
-                setActions([]);
-            } else {
-                setActions((actionsResponse.data ?? []) as ApprovalAction[]);
-            }
-
+    async function loadDetail() {
+        if (!requestId) {
+            setErrorMessage("Missing request ID.");
             setLoading(false);
+            return;
         }
 
+        setLoading(true);
+        setErrorMessage("");
+
+        const requestResponse = await supabase
+            .from("parts_requests")
+            .select("*")
+            .eq("id", requestId)
+            .maybeSingle();
+
+        if (requestResponse.error) {
+            console.error("Failed to load request:", requestResponse.error);
+            setErrorMessage(requestResponse.error.message);
+            setRequest(null);
+            setLoading(false);
+            return;
+        }
+
+        if (!requestResponse.data) {
+            setErrorMessage("Request not found.");
+            setRequest(null);
+            setLoading(false);
+            return;
+        }
+
+        setRequest(requestResponse.data as PartsRequest);
+
+        const quotesResponse = await supabase
+            .from("parts_quotes")
+            .select("*")
+            .eq("request_id", requestId)
+            .order("quote_number", { ascending: true });
+
+        if (quotesResponse.error) {
+            console.error("Failed to load quotes:", quotesResponse.error);
+            setQuotes([]);
+        } else {
+            setQuotes((quotesResponse.data ?? []) as PartsQuote[]);
+        }
+
+        const actionsResponse = await supabase
+            .from("approval_actions")
+            .select("*, profiles(full_name, email)")
+            .eq("request_id", requestId)
+            .order("created_at", { ascending: false });
+
+        if (actionsResponse.error) {
+            console.error("Failed to load actions:", actionsResponse.error);
+            setActions([]);
+        } else {
+            setActions((actionsResponse.data ?? []) as ApprovalAction[]);
+        }
+
+        setLoading(false);
+    }
+
+    useEffect(() => {
         void loadDetail();
     }, [requestId]);
 
@@ -211,13 +212,10 @@ export function RequestDetailPage() {
                         <h2>Approval Actions</h2>
                     </div>
 
-                    <div className="empty-state">
-                        <h3>Action panel coming next</h3>
-                        <p>
-                            Approve, not approve, request more info, recall, and cancel
-                            buttons will be added after request creation is stable.
-                        </p>
-                    </div>
+                    <ApprovalActionPanel
+                        request={request}
+                        onRequestUpdated={loadDetail}
+                    />
                 </article>
             </section>
 
