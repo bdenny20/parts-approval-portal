@@ -19,6 +19,13 @@ import {
 } from "../lib/requestFilters";
 import { supabase } from "../lib/supabaseClient";
 import type { PartsRequest } from "../types/domain";
+import { DashboardBreakdowns } from "../components/kpi/DashboardBreakdowns";
+import {
+    loadAircraftBreakdown,
+    loadDollarTierBreakdown,
+    type AircraftBreakdown,
+    type DollarTierBreakdown,
+} from "../lib/dashboardBreakdowns";
 
 const defaultFilters: DashboardFilterState = {
     search: "",
@@ -37,6 +44,8 @@ export function OriginatorDashboard() {
     const [filters, setFilters] = useState<DashboardFilterState>(defaultFilters);
     const [kpis, setKpis] = useState<DashboardKpis>(emptyDashboardKpis);
     const [loading, setLoading] = useState(true);
+    const [dollarTiers, setDollarTiers] = useState<DollarTierBreakdown[]>([]);
+    const [aircraftBreakdown, setAircraftBreakdown] = useState<AircraftBreakdown[]>([]);
 
     useEffect(() => {
         async function loadRequests() {
@@ -49,7 +58,12 @@ export function OriginatorDashboard() {
 
             setLoading(true);
 
-            const [{ data, error }, nextKpis] = await Promise.all([
+            const [
+                { data, error },
+                nextKpis,
+                nextDollarTiers,
+                nextAircraftBreakdown,
+            ] = await Promise.all([
                 supabase
                     .from("parts_requests")
                     .select("*")
@@ -57,6 +71,8 @@ export function OriginatorDashboard() {
                     .order("created_at", { ascending: false }),
 
                 loadDashboardKpis("originator"),
+                loadDollarTierBreakdown("originator"),
+                loadAircraftBreakdown("originator"),
             ]);
 
             if (error) {
@@ -67,6 +83,8 @@ export function OriginatorDashboard() {
             }
 
             setKpis(nextKpis);
+            setDollarTiers(nextDollarTiers);
+            setAircraftBreakdown(nextAircraftBreakdown);
             setLoading(false);
         }
 
@@ -122,6 +140,10 @@ export function OriginatorDashboard() {
             </div>
 
             <KpiGrid {...kpis} />
+            <DashboardBreakdowns
+                dollarTiers={dollarTiers}
+                aircraft={aircraftBreakdown}
+            />
 
             <DashboardFilters
                 filters={filters}

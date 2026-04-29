@@ -18,6 +18,15 @@ import {
 } from "../lib/requestFilters";
 import { supabase } from "../lib/supabaseClient";
 import type { PartsRequest } from "../types/domain";
+import { DashboardBreakdowns } from "../components/kpi/DashboardBreakdowns";
+import {
+    loadAircraftBreakdown,
+    loadDollarTierBreakdown,
+    loadOriginatorBreakdown,
+    type AircraftBreakdown,
+    type DollarTierBreakdown,
+    type OriginatorBreakdown,
+} from "../lib/dashboardBreakdowns";
 
 const defaultFilters: DashboardFilterState = {
     search: "",
@@ -36,6 +45,9 @@ export function ApproverDashboard() {
     const [filters, setFilters] = useState<DashboardFilterState>(defaultFilters);
     const [kpis, setKpis] = useState<DashboardKpis>(emptyDashboardKpis);
     const [loading, setLoading] = useState(true);
+    const [dollarTiers, setDollarTiers] = useState<DollarTierBreakdown[]>([]);
+    const [aircraftBreakdown, setAircraftBreakdown] = useState<AircraftBreakdown[]>([]);
+    const [originatorBreakdown, setOriginatorBreakdown] = useState<OriginatorBreakdown[]>([]);
 
     useEffect(() => {
         async function loadRequests() {
@@ -48,21 +60,30 @@ export function ApproverDashboard() {
 
             setLoading(true);
 
-            const [{ data, error }, nextKpis] = await Promise.all([
+            const [
+                { data, error },
+                nextKpis,
+                nextDollarTiers,
+                nextAircraftBreakdown,
+                nextOriginatorBreakdown,
+            ] = await Promise.all([
                 supabase
                     .from("parts_requests")
                     .select(
                         `
-            *,
-            profiles!parts_requests_originator_id_fkey (
-              full_name,
-              email
-            )
-          `
+      *,
+      profiles!parts_requests_originator_id_fkey (
+        full_name,
+        email
+      )
+    `
                     )
                     .order("created_at", { ascending: false }),
 
                 loadDashboardKpis("approver"),
+                loadDollarTierBreakdown("approver"),
+                loadAircraftBreakdown("approver"),
+                loadOriginatorBreakdown("approver"),
             ]);
 
             if (error) {
@@ -73,6 +94,9 @@ export function ApproverDashboard() {
             }
 
             setKpis(nextKpis);
+            setDollarTiers(nextDollarTiers);
+            setAircraftBreakdown(nextAircraftBreakdown);
+            setOriginatorBreakdown(nextOriginatorBreakdown);
             setLoading(false);
         }
 
@@ -141,6 +165,12 @@ export function ApproverDashboard() {
             </div>
 
             <KpiGrid {...kpis} />
+            <DashboardBreakdowns
+                dollarTiers={dollarTiers}
+                aircraft={aircraftBreakdown}
+                originators={originatorBreakdown}
+                showOriginators
+            />
 
             <DashboardFilters
                 filters={filters}
