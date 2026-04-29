@@ -112,3 +112,21 @@ export interface ApprovalAction {
     created_at: string;
     profiles?: Pick<Profile, "full_name" | "email"> | null;
 }
+export interface EmailNotificationLog {
+    id: string;
+    request_id: string;
+    recipient_profile_id: string | null;
+    recipient_email: string;
+    notification_type:
+        | "submitted"
+        | "more_info_requested"
+        | "approved"
+        | "not_approved"
+        | "recalled"
+        | "cancelled";
+    subject: string;
+    sent_at: string | null;
+    delivery_status: "pending" | "sent" | "failed";
+    error_message: string | null;
+    created_at: string;
+}

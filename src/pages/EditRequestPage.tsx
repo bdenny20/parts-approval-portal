@@ -4,6 +4,7 @@ import { ArrowLeft, Save, SendHorizonal } from "lucide-react";
 import { RequestStatusBadge } from "../components/requests/RequestStatusBadge";
 import { useAuth } from "../lib/auth";
 import { supabase } from "../lib/supabaseClient";
+import { processPendingEmailNotifications } from "../lib/emailNotifications";
 import type {
     PartCondition,
     PartsQuote,
@@ -442,6 +443,8 @@ export function EditRequestPage() {
                 setErrorMessage(error.message);
                 return;
             }
+
+            await processPendingEmailNotifications(25);
 
             setSuccessMessage("Request submitted successfully.");
             navigate(`/requests/${request.id}`);

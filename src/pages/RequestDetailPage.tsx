@@ -4,18 +4,27 @@ import { ArrowLeft } from "lucide-react";
 import { RequestStatusBadge } from "../components/requests/RequestStatusBadge";
 import { formatCurrency, formatDateTime } from "../lib/formatters";
 import { supabase } from "../lib/supabaseClient";
-import type { ApprovalAction, PartsQuote, PartsRequest } from "../types/domain";
+import type {
+    ApprovalAction,
+    EmailNotificationLog,
+    PartsQuote,
+    PartsRequest,
+} from "../types/domain";
 import { ApprovalActionPanel } from "../components/requests/ApprovalActionPanel";
 import { OriginatorActionPanel } from "../components/requests/OriginatorActionPanel";
+import { EmailNotificationLogPanel } from "../components/requests/EmailNotificationLogPanel";
+import { useAuth } from "../lib/auth";
 
 export function RequestDetailPage() {
     const { requestId } = useParams<{ requestId: string }>();
+    const { profile } = useAuth();
 
     const [request, setRequest] = useState<PartsRequest | null>(null);
     const [quotes, setQuotes] = useState<PartsQuote[]>([]);
     const [actions, setActions] = useState<ApprovalAction[]>([]);
     const [loading, setLoading] = useState(true);
     const [errorMessage, setErrorMessage] = useState("");
+    const [emailLogs, setEmailLogs] = useState<EmailNotificationLog[]>([]);
 
     async function loadDetail() {
         if (!requestId) {
@@ -26,6 +35,18 @@ export function RequestDetailPage() {
 
         setLoading(true);
         setErrorMessage("");
+        const emailLogsResponse = await supabase
+            .from("email_notification_log")
+            .select("*")
+            .eq("request_id", requestId)
+            .order("created_at", { ascending: false });
+
+        if (emailLogsResponse.error) {
+            console.error("Failed to load email logs:", emailLogsResponse.error);
+            setEmailLogs([]);
+        } else {
+            setEmailLogs((emailLogsResponse.data ?? []) as EmailNotificationLog[]);
+        }
 
         const requestResponse = await supabase
             .from("parts_requests")
@@ -328,6 +349,7 @@ export function RequestDetailPage() {
                     </div>
                 )}
             </section>
+            {profile?.can_approve && <EmailNotificationLogPanel logs={emailLogs} />}
         </div>
     );
 }

@@ -4,6 +4,7 @@ import { Save, SendHorizonal } from "lucide-react";
 import { useAuth } from "../lib/auth";
 import { supabase } from "../lib/supabaseClient";
 import type { PartCondition, Priority, PurchaseType } from "../types/domain";
+import { processPendingEmailNotifications } from "../lib/emailNotifications";
 
 interface RequestFormState {
     title: string;
@@ -326,6 +327,8 @@ export function NewRequestPage() {
                 setErrorMessage(error.message);
                 return;
             }
+
+            await processPendingEmailNotifications(25);
 
             setSuccessMessage("Request submitted successfully.");
             navigate(`/requests/${requestId}`);

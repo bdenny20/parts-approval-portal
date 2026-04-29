@@ -3,6 +3,7 @@ import { Save, Search, ShieldCheck, UserCog } from "lucide-react";
 import { getApprovalLevelLabel, getRoleLabel } from "../lib/roles";
 import { supabase } from "../lib/supabaseClient";
 import type { Profile, UserRole } from "../types/domain";
+import { EmailProcessorPanel } from "../components/admin/EmailProcessorPanel";
 
 interface EditableProfileState {
     full_name: string;
@@ -247,7 +248,7 @@ export function AdminUsersPage() {
 
             {errorMessage && <div className="form-error">{errorMessage}</div>}
             {successMessage && <div className="form-success">{successMessage}</div>}
-
+            <EmailProcessorPanel />
             <section className="admin-layout">
                 <article className="panel">
                     <div className="panel-header">
