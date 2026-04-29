@@ -1,9 +1,10 @@
-import  { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
-import type{ RequestStatusBadge } from "../components/requests/RequestStatusBadge";
+import { useEffect, useState } from "react";
+import { Link, useParams } from "react-router-dom";
+import { ArrowLeft } from "lucide-react";
+import { RequestStatusBadge } from "../components/requests/RequestStatusBadge";
 import { formatCurrency, formatDateTime } from "../lib/formatters";
 import { supabase } from "../lib/supabaseClient";
-import type{ ApprovalAction, PartsQuote, PartsRequest } from "../types/domain";
+import type { ApprovalAction, PartsQuote, PartsRequest } from "../types/domain";
 
 export function RequestDetailPage() {
     const { requestId } = useParams<{ requestId: string }>();
@@ -12,52 +13,63 @@ export function RequestDetailPage() {
     const [quotes, setQuotes] = useState<PartsQuote[]>([]);
     const [actions, setActions] = useState<ApprovalAction[]>([]);
     const [loading, setLoading] = useState(true);
+    const [errorMessage, setErrorMessage] = useState("");
 
     useEffect(() => {
         async function loadDetail() {
             if (!requestId) {
+                setErrorMessage("Missing request ID.");
+                setLoading(false);
                 return;
             }
 
             setLoading(true);
+            setErrorMessage("");
 
-            const [requestResponse, quotesResponse, actionsResponse] =
-                await Promise.all([
-                    supabase
-                        .from("parts_requests")
-                        .select("*")
-                        .eq("id", requestId)
-                        .single(),
-
-                    supabase
-                        .from("parts_quotes")
-                        .select("*")
-                        .eq("request_id", requestId)
-                        .order("quote_number", { ascending: true }),
-
-                    supabase
-                        .from("approval_actions")
-                        .select("*, profiles(full_name, email)")
-                        .eq("request_id", requestId)
-                        .order("created_at", { ascending: false }),
-                ]);
+            const requestResponse = await supabase
+                .from("parts_requests")
+                .select("*")
+                .eq("id", requestId)
+                .maybeSingle();
 
             if (requestResponse.error) {
-                console.error("Failed to load request:", requestResponse.error.message);
+                console.error("Failed to load request:", requestResponse.error);
+                setErrorMessage(requestResponse.error.message);
                 setRequest(null);
-            } else {
-                setRequest(requestResponse.data as PartsRequest);
+                setLoading(false);
+                return;
             }
 
+            if (!requestResponse.data) {
+                setErrorMessage("Request not found.");
+                setRequest(null);
+                setLoading(false);
+                return;
+            }
+
+            setRequest(requestResponse.data as PartsRequest);
+
+            const quotesResponse = await supabase
+                .from("parts_quotes")
+                .select("*")
+                .eq("request_id", requestId)
+                .order("quote_number", { ascending: true });
+
             if (quotesResponse.error) {
-                console.error("Failed to load quotes:", quotesResponse.error.message);
+                console.error("Failed to load quotes:", quotesResponse.error);
                 setQuotes([]);
             } else {
                 setQuotes((quotesResponse.data ?? []) as PartsQuote[]);
             }
 
+            const actionsResponse = await supabase
+                .from("approval_actions")
+                .select("*, profiles(full_name, email)")
+                .eq("request_id", requestId)
+                .order("created_at", { ascending: false });
+
             if (actionsResponse.error) {
-                console.error("Failed to load actions:", actionsResponse.error.message);
+                console.error("Failed to load actions:", actionsResponse.error);
                 setActions([]);
             } else {
                 setActions((actionsResponse.data ?? []) as ApprovalAction[]);
@@ -66,7 +78,7 @@ export function RequestDetailPage() {
             setLoading(false);
         }
 
-        loadDetail();
+        void loadDetail();
     }, [requestId]);
 
     if (loading) {
@@ -77,11 +89,21 @@ export function RequestDetailPage() {
         );
     }
 
-    if (!request) {
+    if (errorMessage || !request) {
         return (
-            <section className="panel">
-                <div className="empty-state">Request not found.</div>
-            </section>
+            <div className="page-stack">
+                <Link to="/" className="secondary-button link-button">
+                    <ArrowLeft size={18} />
+                    Back to Dashboard
+                </Link>
+
+                <section className="panel">
+                    <div className="empty-state">
+                        <h3>Unable to load request</h3>
+                        <p>{errorMessage || "Request not found."}</p>
+                    </div>
+                </section>
+            </div>
         );
     }
 
@@ -89,8 +111,15 @@ export function RequestDetailPage() {
         <div className="page-stack">
             <div className="page-title-row">
                 <div>
-                    <h2>{request.title}</h2>
-                    <p>{request.request_number}</p>
+                    <Link to="/" className="secondary-button link-button">
+                        <ArrowLeft size={18} />
+                        Back
+                    </Link>
+
+                    <div style={{ marginTop: 16 }}>
+                        <h2>{request.title}</h2>
+                        <p>{request.request_number}</p>
+                    </div>
                 </div>
 
                 <RequestStatusBadge status={request.status} />
@@ -109,6 +138,13 @@ export function RequestDetailPage() {
                         </div>
 
                         <div>
+                            <dt>Status</dt>
+                            <dd>
+                                <RequestStatusBadge status={request.status} />
+                            </dd>
+                        </div>
+
+                        <div>
                             <dt>Aircraft Tail</dt>
                             <dd>{request.aircraft_tail}</dd>
                         </div>
@@ -124,13 +160,13 @@ export function RequestDetailPage() {
                         </div>
 
                         <div>
-                            <dt>Description</dt>
-                            <dd>{request.part_description}</dd>
-                        </div>
-
-                        <div>
                             <dt>Quantity</dt>
                             <dd>{request.quantity}</dd>
+                        </div>
+
+                        <div className="detail-span">
+                            <dt>Description</dt>
+                            <dd>{request.part_description}</dd>
                         </div>
 
                         <div>
@@ -143,9 +179,24 @@ export function RequestDetailPage() {
                             <dd>{request.priority}</dd>
                         </div>
 
+                        <div>
+                            <dt>Submitted At</dt>
+                            <dd>{formatDateTime(request.submitted_at)}</dd>
+                        </div>
+
+                        <div>
+                            <dt>Approved At</dt>
+                            <dd>{formatDateTime(request.approved_at)}</dd>
+                        </div>
+
                         <div className="detail-span">
                             <dt>Justification</dt>
                             <dd>{request.justification}</dd>
+                        </div>
+
+                        <div className="detail-span">
+                            <dt>Notes</dt>
+                            <dd>{request.notes ?? "—"}</dd>
                         </div>
 
                         <div className="detail-span">
@@ -161,7 +212,11 @@ export function RequestDetailPage() {
                     </div>
 
                     <div className="empty-state">
-                        Action buttons will be added in the next code drop.
+                        <h3>Action panel coming next</h3>
+                        <p>
+                            Approve, not approve, request more info, recall, and cancel
+                            buttons will be added after request creation is stable.
+                        </p>
                     </div>
                 </article>
             </section>
@@ -225,6 +280,11 @@ export function RequestDetailPage() {
                                     <div>
                                         <dt>Expiration</dt>
                                         <dd>{quote.quote_expiration_date ?? "—"}</dd>
+                                    </div>
+
+                                    <div>
+                                        <dt>Notes</dt>
+                                        <dd>{quote.notes ?? "—"}</dd>
                                     </div>
                                 </dl>
                             </article>
