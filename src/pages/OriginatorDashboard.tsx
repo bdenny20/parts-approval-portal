@@ -9,6 +9,11 @@ import {
 import { RequestTable } from "../components/requests/RequestTable";
 import { useAuth } from "../lib/auth";
 import {
+    emptyDashboardKpis,
+    loadDashboardKpis,
+    type DashboardKpis,
+} from "../lib/dashboardKpis";
+import {
     filterPartsRequests,
     getUniqueAircraftOptions,
 } from "../lib/requestFilters";
@@ -27,24 +32,32 @@ const defaultFilters: DashboardFilterState = {
 
 export function OriginatorDashboard() {
     const { profile } = useAuth();
+
     const [requests, setRequests] = useState<PartsRequest[]>([]);
     const [filters, setFilters] = useState<DashboardFilterState>(defaultFilters);
+    const [kpis, setKpis] = useState<DashboardKpis>(emptyDashboardKpis);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         async function loadRequests() {
             if (!profile) {
                 setLoading(false);
+                setRequests([]);
+                setKpis(emptyDashboardKpis);
                 return;
             }
 
             setLoading(true);
 
-            const { data, error } = await supabase
-                .from("parts_requests")
-                .select("*")
-                .eq("originator_id", profile.id)
-                .order("created_at", { ascending: false });
+            const [{ data, error }, nextKpis] = await Promise.all([
+                supabase
+                    .from("parts_requests")
+                    .select("*")
+                    .eq("originator_id", profile.id)
+                    .order("created_at", { ascending: false }),
+
+                loadDashboardKpis("originator"),
+            ]);
 
             if (error) {
                 console.error("Failed to load originator requests:", error.message);
@@ -53,6 +66,7 @@ export function OriginatorDashboard() {
                 setRequests((data ?? []) as PartsRequest[]);
             }
 
+            setKpis(nextKpis);
             setLoading(false);
         }
 
@@ -67,23 +81,9 @@ export function OriginatorDashboard() {
         return getUniqueAircraftOptions(requests);
     }, [requests]);
 
-    const kpis = useMemo(() => {
-        const openStatuses = ["submitted", "in_review", "more_info_requested"];
-
-        return {
-            openRequests: requests.filter((request) =>
-                openStatuses.includes(request.status)
-            ).length,
-            inReview: requests.filter((request) => request.status === "in_review")
-                .length,
-            approved: requests.filter((request) => request.status === "approved")
-                .length,
-            notApproved: requests.filter(
-                (request) => request.status === "not_approved"
-            ).length,
-            awaitingMyApproval: 0,
-        };
-    }, [requests]);
+    const editable = filteredRequests.filter((request) =>
+        ["draft", "recalled", "more_info_requested"].includes(request.status)
+    );
 
     const drafts = filteredRequests.filter((request) => request.status === "draft");
 
@@ -93,10 +93,6 @@ export function OriginatorDashboard() {
 
     const open = filteredRequests.filter((request) =>
         ["submitted", "in_review", "more_info_requested"].includes(request.status)
-    );
-
-    const editable = filteredRequests.filter((request) =>
-        ["draft", "recalled", "more_info_requested"].includes(request.status)
     );
 
     const approved = filteredRequests.filter(

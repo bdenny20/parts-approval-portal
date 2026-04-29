@@ -7,6 +7,11 @@ import {
 import { RequestTable } from "../components/requests/RequestTable";
 import { useAuth } from "../lib/auth";
 import {
+    emptyDashboardKpis,
+    loadDashboardKpis,
+    type DashboardKpis,
+} from "../lib/dashboardKpis";
+import {
     filterPartsRequests,
     getUniqueAircraftOptions,
     getUniqueOriginatorOptions,
@@ -26,18 +31,39 @@ const defaultFilters: DashboardFilterState = {
 
 export function ApproverDashboard() {
     const { profile } = useAuth();
+
     const [requests, setRequests] = useState<PartsRequest[]>([]);
     const [filters, setFilters] = useState<DashboardFilterState>(defaultFilters);
+    const [kpis, setKpis] = useState<DashboardKpis>(emptyDashboardKpis);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         async function loadRequests() {
+            if (!profile) {
+                setLoading(false);
+                setRequests([]);
+                setKpis(emptyDashboardKpis);
+                return;
+            }
+
             setLoading(true);
 
-            const { data, error } = await supabase
-                .from("parts_requests")
-                .select("*, profiles(full_name, email)")
-                .order("created_at", { ascending: false });
+            const [{ data, error }, nextKpis] = await Promise.all([
+                supabase
+                    .from("parts_requests")
+                    .select(
+                        `
+            *,
+            profiles!parts_requests_originator_id_fkey (
+              full_name,
+              email
+            )
+          `
+                    )
+                    .order("created_at", { ascending: false }),
+
+                loadDashboardKpis("approver"),
+            ]);
 
             if (error) {
                 console.error("Failed to load approval requests:", error.message);
@@ -46,11 +72,12 @@ export function ApproverDashboard() {
                 setRequests((data ?? []) as PartsRequest[]);
             }
 
+            setKpis(nextKpis);
             setLoading(false);
         }
 
         void loadRequests();
-    }, []);
+    }, [profile]);
 
     const filteredRequests = useMemo(() => {
         return filterPartsRequests(requests, filters);
@@ -100,30 +127,6 @@ export function ApproverDashboard() {
     const recalledCancelled = filteredRequests.filter((request) =>
         ["recalled", "cancelled"].includes(request.status)
     );
-
-    const kpis = {
-        openRequests: requests.filter((request) =>
-            ["submitted", "in_review", "more_info_requested"].includes(request.status)
-        ).length,
-        inReview: requests.filter((request) => request.status === "in_review").length,
-        approved: requests.filter((request) => request.status === "approved").length,
-        notApproved: requests.filter((request) => request.status === "not_approved")
-            .length,
-        awaitingMyApproval: requests.filter((request) => {
-            if (!profile || !profile.can_approve) {
-                return false;
-            }
-
-            const isOpen = ["submitted", "in_review", "more_info_requested"].includes(
-                request.status
-            );
-
-            const hasAuthority =
-                profile.approval_level >= (request.required_approval_level ?? 999);
-
-            return isOpen && hasAuthority;
-        }).length,
-    };
 
     return (
         <div className="page-stack">

@@ -361,7 +361,7 @@ a {
 
 .kpi-grid {
     display: grid;
-    grid-template-columns: repeat(5, minmax(0, 1fr));
+    grid-template-columns: repeat(6, minmax(0, 1fr));
     gap: 16px;
 }
 
@@ -407,6 +407,9 @@ a {
 
 .kpi-slate .kpi-icon {
     color: var(--slate);
+}
+.kpi-purple .kpi-icon {
+    color: var(--purple);
 }
 
 .kpi-title,

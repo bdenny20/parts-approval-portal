@@ -4,7 +4,9 @@ import {
     FileWarning,
     Hourglass,
     ShieldAlert,
+    Timer,
 } from "lucide-react";
+import { formatAverageApprovalTime } from "../../lib/dashboardKpis";
 import { KpiCard } from "./KpiCard";
 
 interface KpiGridProps {
@@ -12,6 +14,7 @@ interface KpiGridProps {
     inReview: number;
     approved: number;
     notApproved: number;
+    averageApprovalHours: number;
     awaitingMyApproval: number;
 }
 
@@ -20,6 +23,7 @@ export function KpiGrid({
                             inReview,
                             approved,
                             notApproved,
+                            averageApprovalHours,
                             awaitingMyApproval,
                         }: KpiGridProps) {
     return (
@@ -54,6 +58,14 @@ export function KpiGrid({
                 description="Rejected purchase requests"
                 icon={FileWarning}
                 tone="red"
+            />
+
+            <KpiCard
+                title="Avg Approval Time"
+                value={formatAverageApprovalTime(averageApprovalHours)}
+                description="From submitted to approved"
+                icon={Timer}
+                tone="purple"
             />
 
             <KpiCard
