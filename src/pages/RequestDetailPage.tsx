@@ -6,6 +6,7 @@ import { formatCurrency, formatDateTime } from "../lib/formatters";
 import { supabase } from "../lib/supabaseClient";
 import type { ApprovalAction, PartsQuote, PartsRequest } from "../types/domain";
 import { ApprovalActionPanel } from "../components/requests/ApprovalActionPanel";
+import { OriginatorActionPanel } from "../components/requests/OriginatorActionPanel";
 
 export function RequestDetailPage() {
     const { requestId } = useParams<{ requestId: string }>();
@@ -213,6 +214,16 @@ export function RequestDetailPage() {
                     </div>
 
                     <ApprovalActionPanel
+                        request={request}
+                        onRequestUpdated={loadDetail}
+                    />
+                </article>
+                <article className="panel">
+                    <div className="panel-header">
+                        <h2>Originator Actions</h2>
+                    </div>
+
+                    <OriginatorActionPanel
                         request={request}
                         onRequestUpdated={loadDetail}
                     />

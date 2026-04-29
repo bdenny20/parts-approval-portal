@@ -8,6 +8,7 @@ import { LoginPage } from "../pages/LoginPage";
 import { NewRequestPage } from "../pages/NewRequestPage";
 import { OriginatorDashboard } from "../pages/OriginatorDashboard";
 import { RequestDetailPage } from "../pages/RequestDetailPage";
+import { EditRequestPage } from "../pages/EditRequestPage";
 
 function LoadingScreen() {
     return (
@@ -92,6 +93,7 @@ export function AppRouter() {
                 <Route path="/originator" element={<OriginatorDashboard />} />
                 <Route path="/approver" element={<ApproverDashboard />} />
                 <Route path="/requests/new" element={<NewRequestPage />} />
+                <Route path="/requests/:requestId/edit" element={<EditRequestPage />} />
                 <Route path="/requests/:requestId" element={<RequestDetailPage />} />
                 <Route path="/admin/users" element={<AdminUsersPage />} />
             </Route>
