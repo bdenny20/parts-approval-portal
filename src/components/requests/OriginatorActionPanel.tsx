@@ -1,4 +1,4 @@
-import { FormEvent, useMemo, useState } from "react";
+import { type FormEvent, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { Ban, Pencil, RotateCcw, SendHorizonal } from "lucide-react";
 import { useAuth } from "../../lib/auth";

@@ -1,4 +1,4 @@
-import { FormEvent, useMemo, useState } from "react";
+import { type FormEvent, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Save, SendHorizonal } from "lucide-react";
 import { useAuth } from "../lib/auth";

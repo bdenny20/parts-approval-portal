@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { type FormEvent, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, Save, SendHorizonal } from "lucide-react";
 import { RequestStatusBadge } from "../components/requests/RequestStatusBadge";

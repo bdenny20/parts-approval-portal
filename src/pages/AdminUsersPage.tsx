@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { type FormEvent, useEffect, useMemo, useState } from "react";
 import { Save, Search, ShieldCheck, UserCog } from "lucide-react";
 import { getApprovalLevelLabel, getRoleLabel } from "../lib/roles";
 import { supabase } from "../lib/supabaseClient";

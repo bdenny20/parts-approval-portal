@@ -1,4 +1,4 @@
-import { FormEvent, useState } from "react";
+import { type FormEvent, useState } from "react";
 import { ClipboardCheck, LockKeyhole } from "lucide-react";
 import { supabase } from "../lib/supabaseClient";
 

@@ -5,7 +5,7 @@ interface KpiCardProps {
     value: string | number;
     description: string;
     icon: LucideIcon;
-    tone?: "blue" | "green" | "amber" | "red" | "slate";
+    tone?: "blue" | "green" | "amber" | "red" | "slate" | "purple";
 }
 
 export function KpiCard({
