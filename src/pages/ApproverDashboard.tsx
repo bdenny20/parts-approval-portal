@@ -1,13 +1,33 @@
 import { useEffect, useMemo, useState } from "react";
 import { KpiGrid } from "../components/kpi/KpiGrid";
+import {
+    DashboardFilters,
+    type DashboardFilterState,
+} from "../components/requests/DashboardFilters";
 import { RequestTable } from "../components/requests/RequestTable";
 import { useAuth } from "../lib/auth";
+import {
+    filterPartsRequests,
+    getUniqueAircraftOptions,
+    getUniqueOriginatorOptions,
+} from "../lib/requestFilters";
 import { supabase } from "../lib/supabaseClient";
 import type { PartsRequest } from "../types/domain";
+
+const defaultFilters: DashboardFilterState = {
+    search: "",
+    status: "all",
+    aircraft: "all",
+    dollarTier: "all",
+    originator: "all",
+    startDate: "",
+    endDate: "",
+};
 
 export function ApproverDashboard() {
     const { profile } = useAuth();
     const [requests, setRequests] = useState<PartsRequest[]>([]);
+    const [filters, setFilters] = useState<DashboardFilterState>(defaultFilters);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -16,7 +36,7 @@ export function ApproverDashboard() {
 
             const { data, error } = await supabase
                 .from("parts_requests")
-                .select("*")
+                .select("*, profiles(full_name, email)")
                 .order("created_at", { ascending: false });
 
             if (error) {
@@ -32,12 +52,24 @@ export function ApproverDashboard() {
         void loadRequests();
     }, []);
 
+    const filteredRequests = useMemo(() => {
+        return filterPartsRequests(requests, filters);
+    }, [requests, filters]);
+
+    const aircraftOptions = useMemo(() => {
+        return getUniqueAircraftOptions(requests);
+    }, [requests]);
+
+    const originatorOptions = useMemo(() => {
+        return getUniqueOriginatorOptions(requests);
+    }, [requests]);
+
     const awaitingMyApproval = useMemo(() => {
         if (!profile || !profile.can_approve) {
             return [];
         }
 
-        return requests.filter((request) => {
+        return filteredRequests.filter((request) => {
             const isOpen = ["submitted", "in_review", "more_info_requested"].includes(
                 request.status
             );
@@ -47,26 +79,50 @@ export function ApproverDashboard() {
 
             return isOpen && hasAuthority;
         });
-    }, [requests, profile]);
+    }, [filteredRequests, profile]);
 
-    const allOpen = requests.filter((request) =>
+    const allOpen = filteredRequests.filter((request) =>
         ["submitted", "in_review", "more_info_requested"].includes(request.status)
     );
 
-    const inReview = requests.filter((request) => request.status === "in_review");
+    const inReview = filteredRequests.filter(
+        (request) => request.status === "in_review"
+    );
 
-    const approved = requests.filter((request) => request.status === "approved");
+    const approved = filteredRequests.filter(
+        (request) => request.status === "approved"
+    );
 
-    const notApproved = requests.filter(
+    const notApproved = filteredRequests.filter(
         (request) => request.status === "not_approved"
     );
 
+    const recalledCancelled = filteredRequests.filter((request) =>
+        ["recalled", "cancelled"].includes(request.status)
+    );
+
     const kpis = {
-        openRequests: allOpen.length,
-        inReview: inReview.length,
-        approved: approved.length,
-        notApproved: notApproved.length,
-        awaitingMyApproval: awaitingMyApproval.length,
+        openRequests: requests.filter((request) =>
+            ["submitted", "in_review", "more_info_requested"].includes(request.status)
+        ).length,
+        inReview: requests.filter((request) => request.status === "in_review").length,
+        approved: requests.filter((request) => request.status === "approved").length,
+        notApproved: requests.filter((request) => request.status === "not_approved")
+            .length,
+        awaitingMyApproval: requests.filter((request) => {
+            if (!profile || !profile.can_approve) {
+                return false;
+            }
+
+            const isOpen = ["submitted", "in_review", "more_info_requested"].includes(
+                request.status
+            );
+
+            const hasAuthority =
+                profile.approval_level >= (request.required_approval_level ?? 999);
+
+            return isOpen && hasAuthority;
+        }).length,
     };
 
     return (
@@ -82,6 +138,15 @@ export function ApproverDashboard() {
             </div>
 
             <KpiGrid {...kpis} />
+
+            <DashboardFilters
+                filters={filters}
+                onFiltersChange={setFilters}
+                aircraftOptions={aircraftOptions}
+                originatorOptions={originatorOptions}
+                showOriginatorFilter
+                showDateFilters
+            />
 
             {loading ? (
                 <section className="panel">
@@ -117,6 +182,12 @@ export function ApproverDashboard() {
                         title="Not Approved History"
                         requests={notApproved}
                         emptyMessage="No not-approved request history."
+                    />
+
+                    <RequestTable
+                        title="Recalled / Cancelled Requests"
+                        requests={recalledCancelled}
+                        emptyMessage="No recalled or cancelled requests."
                     />
                 </>
             )}

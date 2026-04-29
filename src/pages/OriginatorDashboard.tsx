@@ -2,14 +2,33 @@ import { PlusCircle } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { KpiGrid } from "../components/kpi/KpiGrid";
+import {
+    DashboardFilters,
+    type DashboardFilterState,
+} from "../components/requests/DashboardFilters";
 import { RequestTable } from "../components/requests/RequestTable";
 import { useAuth } from "../lib/auth";
+import {
+    filterPartsRequests,
+    getUniqueAircraftOptions,
+} from "../lib/requestFilters";
 import { supabase } from "../lib/supabaseClient";
 import type { PartsRequest } from "../types/domain";
+
+const defaultFilters: DashboardFilterState = {
+    search: "",
+    status: "all",
+    aircraft: "all",
+    dollarTier: "all",
+    originator: "all",
+    startDate: "",
+    endDate: "",
+};
 
 export function OriginatorDashboard() {
     const { profile } = useAuth();
     const [requests, setRequests] = useState<PartsRequest[]>([]);
+    const [filters, setFilters] = useState<DashboardFilterState>(defaultFilters);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -40,6 +59,14 @@ export function OriginatorDashboard() {
         void loadRequests();
     }, [profile]);
 
+    const filteredRequests = useMemo(() => {
+        return filterPartsRequests(requests, filters);
+    }, [requests, filters]);
+
+    const aircraftOptions = useMemo(() => {
+        return getUniqueAircraftOptions(requests);
+    }, [requests]);
+
     const kpis = useMemo(() => {
         const openStatuses = ["submitted", "in_review", "more_info_requested"];
 
@@ -58,20 +85,30 @@ export function OriginatorDashboard() {
         };
     }, [requests]);
 
-    const drafts = requests.filter((request) => request.status === "draft");
+    const drafts = filteredRequests.filter((request) => request.status === "draft");
 
-    const submitted = requests.filter(
+    const submitted = filteredRequests.filter(
         (request) => request.status === "submitted"
     );
 
-    const open = requests.filter((request) =>
+    const open = filteredRequests.filter((request) =>
         ["submitted", "in_review", "more_info_requested"].includes(request.status)
     );
 
-    const approved = requests.filter((request) => request.status === "approved");
+    const editable = filteredRequests.filter((request) =>
+        ["draft", "recalled", "more_info_requested"].includes(request.status)
+    );
 
-    const notApproved = requests.filter(
+    const approved = filteredRequests.filter(
+        (request) => request.status === "approved"
+    );
+
+    const notApproved = filteredRequests.filter(
         (request) => request.status === "not_approved"
+    );
+
+    const closed = filteredRequests.filter((request) =>
+        ["recalled", "cancelled"].includes(request.status)
     );
 
     return (
@@ -90,6 +127,12 @@ export function OriginatorDashboard() {
 
             <KpiGrid {...kpis} />
 
+            <DashboardFilters
+                filters={filters}
+                onFiltersChange={setFilters}
+                aircraftOptions={aircraftOptions}
+            />
+
             {loading ? (
                 <section className="panel">
                     <div className="empty-state">Loading your requests...</div>
@@ -97,33 +140,59 @@ export function OriginatorDashboard() {
             ) : (
                 <>
                     <RequestTable
+                        title="Editable Requests"
+                        requests={editable}
+                        emptyMessage="No editable draft, recalled, or more-info requests."
+                        currentProfileId={profile?.id}
+                        showEditAction
+                    />
+
+                    <RequestTable
                         title="My Draft Requests"
                         requests={drafts}
                         emptyMessage="No draft requests yet."
+                        currentProfileId={profile?.id}
+                        showEditAction
                     />
 
                     <RequestTable
                         title="My Submitted Requests"
                         requests={submitted}
                         emptyMessage="No submitted requests."
+                        currentProfileId={profile?.id}
+                        showEditAction
                     />
 
                     <RequestTable
                         title="My Open Requests"
                         requests={open}
                         emptyMessage="No open requests."
+                        currentProfileId={profile?.id}
+                        showEditAction
                     />
 
                     <RequestTable
                         title="My Approved Requests"
                         requests={approved}
                         emptyMessage="No approved requests yet."
+                        currentProfileId={profile?.id}
+                        showEditAction
                     />
 
                     <RequestTable
                         title="My Not Approved Requests"
                         requests={notApproved}
                         emptyMessage="No not-approved requests."
+                        currentProfileId={profile?.id}
+                        showEditAction
+                    />
+
+                    <RequestTable
+                        title="Recalled / Cancelled Requests"
+                        requests={closed}
+                        emptyMessage="No recalled or cancelled requests."
+                        currentProfileId={profile?.id}
+                        showEditAction
                     />
                 </>
             )}

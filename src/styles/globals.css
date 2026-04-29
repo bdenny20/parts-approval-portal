@@ -996,3 +996,62 @@ dd {
     cursor: not-allowed;
     pointer-events: auto;
 }
+.filter-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(180px, 1fr));
+    gap: 18px;
+    padding: 20px;
+}
+
+.compact-button {
+    padding: 8px 12px;
+    font-size: 0.84rem;
+}
+
+.table-action-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.table-action-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--text-secondary);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: 6px 10px;
+    text-decoration: none;
+    font-size: 0.78rem;
+    font-weight: 800;
+    background: rgba(15, 23, 42, 0.62);
+}
+
+.table-action-button:hover {
+    color: var(--text-primary);
+    border-color: rgba(56, 189, 248, 0.5);
+}
+
+.table-action-button.edit {
+    color: #bbf7d0;
+    border-color: rgba(34, 197, 94, 0.32);
+    background: rgba(20, 83, 45, 0.22);
+}
+
+@media (max-width: 1180px) {
+    .filter-grid {
+        grid-template-columns: repeat(2, minmax(180px, 1fr));
+    }
+}
+
+@media (max-width: 760px) {
+    .filter-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .table-action-row {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+}
